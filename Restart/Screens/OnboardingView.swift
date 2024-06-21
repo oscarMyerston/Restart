@@ -12,22 +12,28 @@ struct OnboardingView: View {
     @AppStorage("onboarding") var isOnboardingViewActive: Bool = true
     @State private var buttonWidth: Double = UIScreen.main.bounds.width - 80
     @State private var buttonOffSet: CGFloat = 0
+    @State private var isAnimating: Bool = false
+    @State private var imageOffSet: CGSize = .zero
+    @State private var indicatorOpacity: Double = 1.0
+    @State private var textTitle: String = "Share."
+
 
     // MARK: - BODY
     var body: some View {
         ZStack {
             Color("ColorBlue")
                 .ignoresSafeArea(.all, edges: .all)
-
+            
             VStack(spacing: 20) {
                 // MARK: - HEADER
                 Spacer()
                 VStack(spacing: 0) {
-                    Text("Share.")
+                    Text(textTitle)
                         .font(.system(size: 60))
                         .fontWeight(.heavy)
                         .foregroundColor(.white)
-
+                        .transition(.opacity)
+                        .id(textTitle)
                     Text("""
                     It's not how much we give but
                     how much love me put into giving.
@@ -38,35 +44,76 @@ struct OnboardingView: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 10)
                 }//: HEADER
-
+                .opacity(isAnimating ? 1 : 0)
+                .offset(y: isAnimating ? 0 : -40)
+                .animation(.easeOut(duration: 1), value: isAnimating)
+                
                 // MARK: - CENTER
                 ZStack {
                     CircleGroupView(ShapeColor: .white, ShapeOpacity: 0.2)
+                        .offset(x: imageOffSet.width * -1)
+                        .blur(radius: abs(imageOffSet.width / 5))
+                        .animation(.easeOut(duration: 1), value: imageOffSet)
                     Image("character-1")
                         .resizable()
                         .scaledToFit()
-                }//: CENTER
+                        .opacity(isAnimating ? 1 : 0)
+                        .animation(.easeOut(duration: 0.5), value: isAnimating)
+                        .offset(x: imageOffSet.width * 1.2, y: 0)
+                        .rotationEffect(.degrees(Double(imageOffSet.width / 20)))
+                        .gesture(
+                            DragGesture()
+                                .onChanged({ gesture in
+                                    if abs(imageOffSet.width) <= 150 {
+                                        imageOffSet = gesture.translation
+                                        withAnimation(.linear(duration: 0.25)) {
+                                            indicatorOpacity = 0
+                                            textTitle = "Give."
+                                        }
+                                    }
+                                })
+                                .onEnded({ _ in
+                                    imageOffSet = .zero
+                                    withAnimation(.linear(duration: 0.25)) {
+                                        indicatorOpacity = 1
+                                        textTitle = "Share."
 
+                                    }
+                                })
+                        ) //: GESTURE
+                        .animation(.easeOut(duration: 1), value: imageOffSet)
+                }//: CENTER
+                .overlay(
+                    Image(systemName: "arrow.left.and.right.circle")
+                        .font(.system(size: 44, weight: .ultraLight))
+                        .foregroundColor(.white)
+                        .offset(y: 20)
+                        .opacity(isAnimating ? 1 : 0)
+                        .animation(.easeOut(duration: 1).delay(2), value: isAnimating)
+                        .opacity(indicatorOpacity)
+                    , alignment: .bottom
+                )
+                
                 Spacer()
                 // MARK: - FOOTER
                 ZStack {
                     // PARTS OF THE CUSTOM BUTTON
-
+                    
                     // 1. BACKGROUND (STATIC)
                     Capsule()
                         .fill(Color.white.opacity(0.2))
-
+                    
                     Capsule()
                         .fill(Color.white.opacity(0.2))
                         .padding(8)
-
+                    
                     // 2. CALL-TO-ACTION (STATIC)
                     Text("Get Started")
                         .font(.system(.title3, design: .rounded))
                         .fontWeight(.bold)
                         .foregroundColor(.white)
                         .offset(x: 20)
-
+                    
                     // 3. CAPSULE (DYNAMIC WIDTH)
                     HStack {
                         Capsule()
@@ -96,23 +143,31 @@ struct OnboardingView: View {
                                     }
                                 }
                                 .onEnded{ _ in
-                                    if buttonOffSet > buttonWidth / 2 {
-                                        buttonOffSet = buttonWidth - 80
-                                        isOnboardingViewActive = false
-                                    } else {
-                                        buttonOffSet = 0
+                                    withAnimation(Animation.easeOut(duration: 0.4)) {
+                                        if buttonOffSet > buttonWidth / 2 {
+                                            buttonOffSet = buttonWidth - 80
+                                            isOnboardingViewActive = false
+                                        } else {
+                                            buttonOffSet = 0
+                                        }
                                     }
                                 }
-
+                            
                         )// GESTURE
                         Spacer()
                     }//: HStack
-
+                    
                 }//: FOOTER
                 .frame(width: buttonWidth, height: 80, alignment: .center)
                 .padding()
+                .opacity(isAnimating ? 1 : 0)
+                .offset(y: isAnimating ? 0 : 40)
+                .animation(.easeOut(duration: 0.5), value: isAnimating)
             }//: VSTACK
         }//: ZSTACK
+        .onAppear(perform: {
+            self.isAnimating = true
+        })
     }
 }
 
